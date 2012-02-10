@@ -1,5 +1,5 @@
 ;;; Sublain --- Subversion repository browser
-;; Copyright (C) 2006 Fujii Hironori
+;; Copyright (C) 2006,2012 Fujii Hironori
 ;; License: GNU GPL
 
 ;; (autoload 'sublain-list "sublain" "List directory entries in the repository." t)
