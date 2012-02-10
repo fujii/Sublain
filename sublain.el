@@ -320,6 +320,16 @@ nRev: ")
 	  (define-key map "q" 'bury-buffer)
 	  map)))
 
+(defvar sublain-bookmark-default-bookmark "Type 'f' on a URL to visit the repository.
+Type 'e' to edit this bookmark file.
+
+Apache Subversion
+https://svn.apache.org/repos/asf/subversion/trunk/
+
+Apache HTTP Server
+https://svn.apache.org/repos/asf/httpd/httpd/trunk/
+")
+
 (defun sublain-bookmark ()
   "Display bookmark file."
   (interactive)
@@ -360,10 +370,13 @@ Turning on sublain-bookmark-mode runs the hook `sublain-bookmark-mode-hook'."
 
 (defun sublain-bookmark-update ()
   (interactive)
+  (make-directory (file-name-directory sublain-bookmark-file-name) t)
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (when (file-exists-p sublain-bookmark-file-name)
-      (insert-file-contents sublain-bookmark-file-name)))
+    (unless (file-exists-p sublain-bookmark-file-name)
+      (with-temp-file sublain-bookmark-file-name
+	(insert sublain-bookmark-default-bookmark)))
+    (insert-file-contents sublain-bookmark-file-name))
   (set-buffer-modified-p nil))
 
 ;;; sublain-blame
