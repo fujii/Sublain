@@ -369,11 +369,11 @@ Turning on sublain-bookmark-mode runs the hook `sublain-bookmark-mode-hook'."
 (defun sublain-bookmark-update (&optional ignore-auto noconfir)
   (interactive)
   (make-directory (file-name-directory sublain-bookmark-file-name) t)
+  (unless (file-exists-p sublain-bookmark-file-name)
+    (with-temp-file sublain-bookmark-file-name
+      (insert sublain-bookmark-default-bookmark)))
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (unless (file-exists-p sublain-bookmark-file-name)
-      (with-temp-file sublain-bookmark-file-name
-	(insert sublain-bookmark-default-bookmark)))
     (insert-file-contents sublain-bookmark-file-name))
   (set-buffer-modified-p nil))
 
