@@ -23,7 +23,7 @@
 (defvar sublain-list-verbose sublain-list-default-verbose)
 (defvar sublain-list-recursive sublain-list-default-recursive)
 
-(defun sublain-list-update ()
+(defun sublain-list-update (&optional ignore-auto noconfirm)
   (let ((inhibit-read-only t)
 	(arg (sublain-flatten-list "list" "--non-interactive"
 				   (when sublain-list-verbose "--verbose")
@@ -68,6 +68,7 @@
 	  (define-key map "b" 'sublain-list-blame)
 	  (define-key map "c" 'sublain-list-cat)
 	  (define-key map "f" 'sublain-list-visit)
+	  (define-key map "g" 'revert-buffer)
 	  (define-key map "i" 'sublain-list-info)
 	  (define-key map "l" 'sublain-list-show-log)
 	  (define-key map "n" 'sublain-list-next-line)
@@ -88,6 +89,7 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
   (use-local-map sublain-list-mode-map)
   (setq mode-name "Sublain list")
   (setq major-mode 'sublain-list-mode)
+  (setq revert-buffer-function 'sublain-list-update)
   (run-hooks 'sublain-list-mode-hook))
 
 (defun sublain-list-make-local-variable ()
@@ -207,7 +209,7 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
 				   target)))
     (apply 'sublain-call-svn arg)))
 
-(defun sublain-log-update ()
+(defun sublain-log-update (&optional ignore-auto noconfirm)
   (let ((inhibit-read-only t))
     (erase-buffer)
     (sublain-call-svn-log sublain-log-target sublain-log-limit t)
@@ -232,6 +234,7 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
 	  (define-key map "=" 'sublain-log-diff)
 	  (define-key map "U" 'rename-uniquely)
 	  (define-key map "\C-?" 'scroll-down)
+	  (define-key map "g" 'revert-buffer)
 	  (define-key map "l" 'sublain-log-limit)
 	  (define-key map "n" 'sublain-log-next)
 	  (define-key map "p" 'sublain-log-previous)
@@ -251,6 +254,7 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
   (use-local-map sublain-log-mode-map)
   (setq mode-name "Sublain log")
   (setq major-mode 'sublain-log-mode)
+  (setq revert-buffer-function 'sublain-log-update)
   (run-hooks 'sublain-log-mode-hook))
 
 (defvar sublain-log-separator "^------------------------------------------------------------------------$")
@@ -314,7 +318,7 @@ nRev: ")
 	  (define-key map "\C-?" 'scroll-down)
 	  (define-key map "e" 'sublain-bookmark-edit)
 	  (define-key map "f" 'sublain-bookmark-visit)
-	  (define-key map "g" 'sublain-bookmark-update)
+	  (define-key map "g" 'revert-buffer)
 	  (define-key map "n" 'next-line)
 	  (define-key map "p" 'previous-line)
 	  (define-key map "q" 'bury-buffer)
@@ -350,6 +354,7 @@ Turning on sublain-bookmark-mode runs the hook `sublain-bookmark-mode-hook'."
   (use-local-map sublain-bookmark-mode-map)
   (setq mode-name "Sublain bookmark")
   (setq major-mode 'sublain-bookmark-mode)
+  (setq revert-buffer-function 'sublain-bookmark-update)
   (run-hooks 'sublain-bookmark-mode-hook))
 
 (defun sublain-bookmark-visit ()
@@ -360,7 +365,7 @@ Turning on sublain-bookmark-mode runs the hook `sublain-bookmark-mode-hook'."
   (interactive)
   (find-file-other-window sublain-bookmark-file-name))
 
-(defun sublain-bookmark-update ()
+(defun sublain-bookmark-update (&optional ignore-auto noconfir)
   (interactive)
   (make-directory (file-name-directory sublain-bookmark-file-name) t)
   (let ((inhibit-read-only t))
