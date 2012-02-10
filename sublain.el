@@ -9,7 +9,8 @@
 (defmacro sublain-save-line (&rest body)
   `(let ((sublain-save-line (1+ (count-lines (point-min) (line-beginning-position)))))
      ,@body
-     (goto-line sublain-save-line)))
+     (goto-char (point-min))
+     (forward-line (1- sublain-save-line))))
 
 ;;; sublain-list
 
@@ -274,7 +275,7 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
   (save-excursion
     (re-search-backward sublain-log-separator nil t)
     (when (re-search-forward "^r\\([0-9]+\\)" nil t)
-      (string-to-int (match-string 1)))))
+      (string-to-number (match-string 1)))))
 
 (defun sublain-log-diff ()
   (interactive)
@@ -489,15 +490,14 @@ sRevision: ")
 (defun sublain-info (target rev)
   (interactive "sTarget: 
 sRevision: ")
-  (save-excursion
-    (set-buffer (get-buffer-create sublain-info-buffer-name))
+  (with-current-buffer (get-buffer-create sublain-info-buffer-name)
     (setq buffer-read-only t)
     (let ((inhibit-read-only t))
       (erase-buffer)
       (sublain-call-svn "info" (concat target "@" rev))
       (set-buffer-modified-p nil))
-    (goto-char (point-min))
-    (display-buffer (current-buffer))))
+    (goto-char (point-min)))
+  (display-buffer sublain-info-buffer-name))
 
 ;;; process
 (defvar sublain-process-name "sublain")
