@@ -90,7 +90,7 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
   (use-local-map sublain-list-mode-map)
   (setq mode-name "Sublain list")
   (setq major-mode 'sublain-list-mode)
-  (setq revert-buffer-function 'sublain-list-update)
+  (set (make-local-variable 'revert-buffer-function) 'sublain-list-update)
   (run-hooks 'sublain-list-mode-hook))
 
 (defun sublain-list-make-local-variable ()
@@ -255,7 +255,7 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
   (use-local-map sublain-log-mode-map)
   (setq mode-name "Sublain log")
   (setq major-mode 'sublain-log-mode)
-  (setq revert-buffer-function 'sublain-log-update)
+  (set (make-local-variable 'revert-buffer-function) 'sublain-log-update)
   (run-hooks 'sublain-log-mode-hook))
 
 (defvar sublain-log-separator "^------------------------------------------------------------------------$")
@@ -355,7 +355,7 @@ Turning on sublain-bookmark-mode runs the hook `sublain-bookmark-mode-hook'."
   (use-local-map sublain-bookmark-mode-map)
   (setq mode-name "Sublain bookmark")
   (setq major-mode 'sublain-bookmark-mode)
-  (setq revert-buffer-function 'sublain-bookmark-update)
+  (set (make-local-variable 'revert-buffer-function) 'sublain-bookmark-update)
   (run-hooks 'sublain-bookmark-mode-hook))
 
 (defun sublain-bookmark-visit ()
