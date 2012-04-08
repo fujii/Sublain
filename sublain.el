@@ -61,6 +61,7 @@
 	  (define-key map " " 'scroll-up)
 	  (define-key map "B" 'sublain-bookmark)
 	  (define-key map "L" 'sublain-list-show-log-point)
+	  (define-key map "P" 'sublain-list-proplist)
 	  (define-key map "R" 'sublain-list-toggle-recursive)
 	  (define-key map "U" 'rename-uniquely)
 	  (define-key map "V" 'sublain-list-toggle-verbose)
@@ -109,6 +110,10 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
     (unless target
       (error "No file"))
     (sublain-log target)))
+
+(defun sublain-list-proplist ()
+  (interactive)
+  (sublain-proplist sublain-list-target sublain-list-revision))
 
 (defun sublain-list-blame ()
   (interactive)
@@ -483,6 +488,21 @@ sRevision: ")
   (let ((buffer-file-name target))
     (set-auto-mode))
   (view-mode))
+
+;;; sublain-proplist
+(defvar sublain-proplist-buffer-name "*sublain-proplist*")
+
+(defun sublain-proplist (target rev)
+  (interactive "sTarget: 
+sRevision: ")
+  (with-current-buffer (get-buffer-create sublain-proplist-buffer-name)
+    (setq buffer-read-only t)
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (sublain-call-svn "proplist" "-v" (concat target "@" rev))
+      (set-buffer-modified-p nil))
+    (goto-char (point-min)))
+  (display-buffer sublain-proplist-buffer-name))
 
 ;;; sublain-info
 (defvar sublain-info-buffer-name "*sublain-info*")
