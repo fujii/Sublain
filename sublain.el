@@ -1,6 +1,12 @@
-;;; Sublain --- Subversion repository browser
+;;; sublain.el --- Subversion repository browser
+
 ;; Copyright (C) 2006,2012 Fujii Hironori
+
 ;; License: GNU GPL
+;; Author: Fujii Hironori
+;; Keywords: tools
+;; Package-Version: 1.0
+;; Package-Requires: 
 
 ;; (autoload 'sublain-list "sublain" "List directory entries in the repository." t)
 ;; (autoload 'sublain-bookmark "sublain" "Display bookmark file." t)
@@ -44,6 +50,7 @@
 	 (prompt (format "Target (%s): " dir)))
     (read-string prompt nil 'sublain-target-history dir)))
 
+;;;###autoload
 (defun sublain-list (target)
   "List directory entries in the repository."
   (interactive (list (sublain-list-read-target)))
@@ -340,6 +347,7 @@ Apache HTTP Server
 https://svn.apache.org/repos/asf/httpd/httpd/trunk/
 ")
 
+;;;###autoload
 (defun sublain-bookmark ()
   "Display bookmark file."
   (interactive)
@@ -543,3 +551,5 @@ sRevision: ")
       ;; Kill buffer to delete previous ``default-directory''
       (kill-buffer buf)))
   (get-buffer-create name))
+
+;;; sublain.el ends here
