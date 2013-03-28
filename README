@@ -1,5 +1,5 @@
 Sublain - Subversion repository browser for Emacs
 
-* Supported svn commands: list, log, blame, cat, diff, info
+* Supported svn commands: list, log, blame, cat, diff, info, proplist
 * Not supported svn commands: move, checkout, add, copy, export, help, mkdir, prop*
-* Tested with: Emacs/23, svn/1.6
+* Tested with: Emacs/24, svn/1.7
