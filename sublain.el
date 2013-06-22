@@ -245,12 +245,15 @@ Turning on sublain-list-mode runs the hook `sublain-list-mode-hook'."
 	(let ((map (make-sparse-keymap)))
 	  (define-key map " " 'scroll-up)
 	  (define-key map "=" 'sublain-log-diff)
+	  (define-key map "E" 'sublain-log-ediff)
 	  (define-key map "U" 'rename-uniquely)
 	  (define-key map "\C-?" 'scroll-down)
 	  (define-key map "g" 'revert-buffer)
 	  (define-key map "l" 'sublain-log-limit)
 	  (define-key map "n" 'sublain-log-next)
 	  (define-key map "p" 'sublain-log-previous)
+	  (define-key map "j" 'sublain-log-ediff-next)
+	  (define-key map "k" 'sublain-log-ediff-previous)
 	  (define-key map "q" 'bury-buffer)
 	  map)))
 
@@ -271,6 +274,7 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
   (run-hooks 'sublain-log-mode-hook))
 
 (defvar sublain-log-separator "^------------------------------------------------------------------------$")
+(defvar sublain-log-ediff-separator "^ *[MA] \\(.*\\)")
 
 (defun sublain-log-next ()
   (interactive)
@@ -283,11 +287,35 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
   (re-search-backward sublain-log-separator)
   (forward-line 1))
 
+(defun sublain-log-ediff-next ()
+  (interactive)
+  (end-of-line)
+  (re-search-forward sublain-log-ediff-separator nil t)
+  (beginning-of-line))
+
+(defun sublain-log-ediff-previous ()
+  (interactive)
+  (beginning-of-line)
+  (re-search-backward sublain-log-ediff-separator nil t)
+  (beginning-of-line))
+
 (defun sublain-log-get-revision ()
   (save-excursion
     (re-search-backward sublain-log-separator nil t)
     (when (re-search-forward "^r\\([0-9]+\\)" nil t)
       (string-to-number (match-string 1)))))
+
+(defun sublain-log-ediff-get-target ()
+  (save-excursion
+    (beginning-of-line)
+    (when (re-search-forward sublain-log-ediff-separator (line-end-position) t)
+      (match-string 1))))
+
+(defun sublain-log-ediff-match-ext ()
+  (save-excursion
+    (end-of-line)
+    (when (re-search-backward ".*\\(\\..*\\)$" (line-beginning-position) t)
+      (match-string 1))))
 
 (defun sublain-log-diff ()
   (interactive)
@@ -295,6 +323,19 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
     (unless rev
       (error "No revision"))
     (sublain-diff sublain-log-target rev)))
+
+(defun sublain-log-ediff ()
+  (interactive)
+  (let ((changed (sublain-log-ediff-get-target))
+	(matched-ext (sublain-log-ediff-match-ext))
+	(rev (sublain-log-get-revision)))
+    (unless rev
+      (error "No revision"))
+    (unless changed
+      (error "No file"))
+    ;; (message "log-target: %s, changed: %s, rev: %s" sublain-log-target changed rev)
+    ;;(sublain-ediff sublain-log-target changed rev)
+    (sublain-ediff sublain-log-target changed rev matched-ext)))
 
 (defun sublain-log-limit (n)
   (interactive "nLimit: ")
@@ -318,7 +359,81 @@ nRev: ")
     (goto-char (point-min))
     (set-buffer-modified-p nil))
   (diff-mode))
-  
+
+;;; sublain-ediff
+
+(defvar sublain-log-ediff-info-name "*sublain-log-info*")
+(defvar sublain-log-ediff-transient-buffers)
+(defvar sublain-log-ediff-after-quit-destination-buffer)
+
+(defvar sublain-log-repository-root-separator "^Repository Root: ")
+
+(defun sublain-log-repository-root ()
+  (re-search-backward sublain-log-repository-root-separator)
+  (beginning-of-line)
+    (when (re-search-forward (concat sublain-log-repository-root-separator "\\(.*\\)") nil t)
+      (match-string 1)))
+
+(defun sublain-log-ediff-startup-hook ()
+;;   (message "svn-ediff-startup-hook: ediff-after-quit-hook-internal: %S" ediff-after-quit-hook-internal)
+  (add-hook 'ediff-after-quit-hook-internal
+            `(lambda ()
+               (sublain-log-ediff-exit-hook
+                ',sublain-log-ediff-after-quit-destination-buffer ',sublain-log-ediff-transient-buffers))
+            nil 'local))
+
+(defun sublain-log-ediff-exit-hook (svn-buf tmp-bufs)
+  ;; (message "svn-ediff-exit-hook: svn-buf: %s, tmp-bufs: %s" svn-buf tmp-bufs)
+  ;; kill the temp buffers (and their associated windows)
+  (dolist (tb tmp-bufs)
+    (when (and tb (buffer-live-p (get-buffer tb)))
+      (kill-buffer tb)))
+  (delete-other-windows)
+  ;; switch back to the *svn* buffer
+  (when (and svn-buf (buffer-live-p svn-buf)
+             (not (get-buffer-window svn-buf t)))
+    (ignore-errors (switch-to-buffer svn-buf)))
+)
+
+(defun sublain-ediff-mode (ext)
+    (when (string= ext ".c") (c-mode))
+    (when (string= ext ".h") (c-mode))
+    (when (string= ext ".asp") (javascript-mode))
+)
+
+(defun sublain-ediff (target changed rev ext)
+  (interactive "sTarget: 
+sRevision: ")
+  (switch-to-buffer (sublain-get-new-buffer sublain-log-ediff-info-name))
+  (setq buffer-read-only t)
+  (sublain-call-svn "info" "--revision" (number-to-string rev) target)
+  (let ((inhibit-read-only t)
+	(log-root (sublain-log-repository-root))
+	(sublain-log-ediff-after-quit-destination-buffer (get-buffer sublain-log-buffer-name))
+	(sublain-ediff-changed-prev (concat changed "@" (number-to-string (1- rev))))
+	(sublain-ediff-changed-base (concat changed "@" (number-to-string rev)))
+	(startup-hook '(sublain-log-ediff-startup-hook))
+	)
+    (kill-buffer sublain-log-ediff-info-name)
+    ;;
+    (switch-to-buffer (sublain-get-new-buffer sublain-ediff-changed-prev))
+    (setq buffer-read-only t)
+    (sublain-call-svn "cat" (concat log-root sublain-ediff-changed-prev))
+    (sublain-ediff-mode ext)
+    (set-buffer-modified-p nil)
+    ;;
+    (switch-to-buffer (sublain-get-new-buffer sublain-ediff-changed-base))
+    (setq buffer-read-only t)
+    (sublain-call-svn "cat" (concat log-root sublain-ediff-changed-base))
+    (sublain-ediff-mode ext)
+    (set-buffer-modified-p nil)
+    ;;
+    (setq sublain-log-ediff-transient-buffers (list sublain-ediff-changed-prev sublain-ediff-changed-base))
+    (ediff-buffers sublain-ediff-changed-base sublain-ediff-changed-prev startup-hook)
+    )
+  (goto-char (point-min))
+  (view-mode))
+
 ;;; sublain-bookmark
 (defvar sublain-bookmark-buffer-name "*sublain-bookmark*")
 (defvar sublain-bookmark-file-name "~/.sublain/bookmark.txt")
