@@ -333,8 +333,6 @@ Turning on sublain-log-mode runs the hook `sublain-log-mode-hook'."
       (error "No revision"))
     (unless changed
       (error "No file"))
-    ;; (message "log-target: %s, changed: %s, rev: %s" sublain-log-target changed rev)
-    ;;(sublain-ediff sublain-log-target changed rev)
     (sublain-ediff sublain-log-target changed rev matched-ext)))
 
 (defun sublain-log-limit (n)
@@ -362,77 +360,42 @@ nRev: ")
 
 ;;; sublain-ediff
 
-(defvar sublain-log-ediff-info-name "*sublain-log-info*")
-(defvar sublain-log-ediff-transient-buffers)
-(defvar sublain-log-ediff-after-quit-destination-buffer)
+(defvar sublain-ediff-transient-buffers)
+(defvar sublain-ediff-saved-window-configuration)
+(defvar sublain-repository-root-separator "^Repository Root: ")
 
-(defvar sublain-log-repository-root-separator "^Repository Root: ")
+(defun sublain-ediff-repository-root (target)
+  (with-temp-buffer 
+    (sublain-call-svn "info" target)
+    (re-search-backward sublain-repository-root-separator)
+    (beginning-of-line)
+    (when (re-search-forward (concat sublain-repository-root-separator "\\(.*\\)") nil t)
+      (match-string 1))))
 
-(defun sublain-log-repository-root ()
-  (re-search-backward sublain-log-repository-root-separator)
-  (beginning-of-line)
-    (when (re-search-forward (concat sublain-log-repository-root-separator "\\(.*\\)") nil t)
-      (match-string 1)))
-
-(defun sublain-log-ediff-startup-hook ()
-;;   (message "svn-ediff-startup-hook: ediff-after-quit-hook-internal: %S" ediff-after-quit-hook-internal)
+(defun sublain-ediff-startup-hook ()
   (add-hook 'ediff-after-quit-hook-internal
-            `(lambda ()
-               (sublain-log-ediff-exit-hook
-                ',sublain-log-ediff-after-quit-destination-buffer ',sublain-log-ediff-transient-buffers))
+	    'sublain-ediff-exit-hook
             nil 'local))
 
-(defun sublain-log-ediff-exit-hook (svn-buf tmp-bufs)
-  ;; (message "svn-ediff-exit-hook: svn-buf: %s, tmp-bufs: %s" svn-buf tmp-bufs)
-  ;; kill the temp buffers (and their associated windows)
-  (dolist (tb tmp-bufs)
-    (when (and tb (buffer-live-p (get-buffer tb)))
-      (kill-buffer tb)))
-  (delete-other-windows)
-  ;; switch back to the *svn* buffer
-  (when (and svn-buf (buffer-live-p svn-buf)
-             (not (get-buffer-window svn-buf t)))
-    (ignore-errors (switch-to-buffer svn-buf)))
-)
-
-(defun sublain-ediff-mode (ext)
-    (when (string= ext ".c") (c-mode))
-    (when (string= ext ".h") (c-mode))
-    (when (string= ext ".asp") (javascript-mode))
-)
+(defun sublain-ediff-exit-hook ()
+  (mapcar 'kill-buffer sublain-ediff-transient-buffers)
+  (set-window-configuration sublain-ediff-saved-window-configuration))
 
 (defun sublain-ediff (target changed rev ext)
-  (interactive "sTarget: 
-sRevision: ")
-  (switch-to-buffer (sublain-get-new-buffer sublain-log-ediff-info-name))
-  (setq buffer-read-only t)
-  (sublain-call-svn "info" "--revision" (number-to-string rev) target)
-  (let ((inhibit-read-only t)
-	(log-root (sublain-log-repository-root))
-	(sublain-log-ediff-after-quit-destination-buffer (get-buffer sublain-log-buffer-name))
-	(sublain-ediff-changed-prev (concat changed "@" (number-to-string (1- rev))))
-	(sublain-ediff-changed-base (concat changed "@" (number-to-string rev)))
-	(startup-hook '(sublain-log-ediff-startup-hook))
-	)
-    (kill-buffer sublain-log-ediff-info-name)
+  (setq sublain-ediff-saved-window-configuration (current-window-configuration))
+  (let ((repository-root (sublain-ediff-repository-root target))
+	(sublain-ediff-after-quit-destination-buffer (get-buffer sublain-log-buffer-name))
+	base prev)
     ;;
-    (switch-to-buffer (sublain-get-new-buffer sublain-ediff-changed-prev))
-    (setq buffer-read-only t)
-    (sublain-call-svn "cat" (concat log-root sublain-ediff-changed-prev))
-    (sublain-ediff-mode ext)
-    (set-buffer-modified-p nil)
+    (sublain-cat (concat repository-root changed) (number-to-string (1- rev)))
+    (setq prev (current-buffer))
     ;;
-    (switch-to-buffer (sublain-get-new-buffer sublain-ediff-changed-base))
-    (setq buffer-read-only t)
-    (sublain-call-svn "cat" (concat log-root sublain-ediff-changed-base))
-    (sublain-ediff-mode ext)
-    (set-buffer-modified-p nil)
+    (sublain-cat (concat repository-root changed) (number-to-string rev))
+    (setq base (current-buffer))
     ;;
-    (setq sublain-log-ediff-transient-buffers (list sublain-ediff-changed-prev sublain-ediff-changed-base))
-    (ediff-buffers sublain-ediff-changed-base sublain-ediff-changed-prev startup-hook)
-    )
-  (goto-char (point-min))
-  (view-mode))
+    (setq sublain-ediff-transient-buffers (list base prev))
+    (ediff-buffers base prev '(sublain-ediff-startup-hook))))
+
 
 ;;; sublain-bookmark
 (defvar sublain-bookmark-buffer-name "*sublain-bookmark*")
